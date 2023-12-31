@@ -1,12 +1,17 @@
 const express = require('express');
 const app = express();
 const cors = require("cors")
+const helmet = require('helmet');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+app.use(helmet({
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
+}));
+
 
 
 const uri = process.env.DATABASE_URI;
@@ -20,11 +25,18 @@ async function run() {
 
     app.post("/user", async(req, res)=>{
       const userInfo = req.body;
-      console.log(userInfo);
+      // console.log("userInfo",userInfo);
       try {
-        const result = await usersCollection.insertOne(userInfo);
-        res.status(201).json(result);
-        console.log(result);
+        const AllUsers = await usersCollection.find().toArray();
+        const previousAddedUser = AllUsers.find(user=> user.email === userInfo.email);
+        if(!previousAddedUser){
+          const result = await usersCollection.insertOne(userInfo);
+          res.status(201).json(result);
+          // console.log(result);
+        }
+        else{
+          res.status(201).json("User already added!");
+        }
       } catch (err) {
         console.error('Error creating user:', err);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -45,11 +57,10 @@ async function run() {
     
     app.post("/task", async(req, res)=>{
       const taskData = req.body;
-      console.log(taskData);
       try {
         const result = await tasksCollection.insertOne(taskData);
         res.status(201).json(result);
-        console.log(result);
+        // console.log(result);
       } catch (err) {
         console.error('Error creating user:', err);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -81,10 +92,10 @@ async function run() {
     });
 
 
-    app.patch("/changeTaskStatus/:taskId", async(req, res)=>{
+    app.patch("/changeTaskStatus/:id", async(req, res)=>{
       try {
         const taskId = req.params.taskId;
-        console.log(taskId);
+        // console.log(taskId);
         const filter = {_id: new ObjectId(taskId)};
         const updatedDoc = {
           $set: {
@@ -92,7 +103,7 @@ async function run() {
           },
         };
         const result = await tasksCollection.updateOne(filter, updatedDoc);
-        console.log(result);
+        // console.log(result);
         res.json(result);
       } catch (err) {
         console.error('Error deleting task:', err);
@@ -101,13 +112,20 @@ async function run() {
     });
 
 
+    app.patch("/updateTaskInfo", async(req, res)=>{
+      const updatedDoc = req.body;
+      console.log(updatedDoc);
+      return res.status(200).send("data updated successfully");
+    });
+
+
     app.delete("/deleteTask/:taskId", async(req, res)=>{
       try {
         const taskId = req.params.taskId;
-        console.log(taskId);
+        // console.log(taskId);
         const query = {_id: new ObjectId(taskId)};
         const result = await tasksCollection.deleteOne(query);
-        console.log(result);
+        // console.log(result);
         res.json(result);
       } catch (err) {
         console.error('Error deleting task:', err);
@@ -128,6 +146,3 @@ run().catch(console.dir);
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
-
-// userName:taskPro
-// password:cypjk5qAb1ep3Bp0
